@@ -1,0 +1,4 @@
+Cython
+EasyDict
+opencv-python
+mxnet-cu90==0.12.0b20171028
