@@ -128,6 +128,7 @@ def im_detect(predictor, data_batch, data_names, scales, cfg):
     scores_all = []
     pred_boxes_all = []
     for output, data_dict, scale in zip(output_all, data_dict_all, scales):
+        # print(output)
         if cfg.TEST.HAS_RPN:
             rois = output['rois_output'].asnumpy()[:, 1:]
         else:

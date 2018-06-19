@@ -41,13 +41,17 @@ def im_detect(predictor, data_batch, data_names, scales, cfg):
     data_dict_all = [dict(zip(data_names, idata)) for idata in data_batch.data]
     scores_all = []
     pred_boxes_all = []
+    # print("output all is", len(output_all[0]))
     for output, data_dict, scale in zip(output_all, data_dict_all, scales):
+        # print("loc 2.5, cfg.TEST.HAS_RPN is", cfg.TEST.HAS_RPN)
         if cfg.TEST.HAS_RPN:
+            # print("loc 2.7")
+            # print("output is", output)
             rois = output['rois_output'].asnumpy()[:, 1:]
         else:
             rois = data_dict['rois'].asnumpy().reshape((-1, 5))[:, 1:]
         im_shape = data_dict['data'].shape
-
+        # print("loc 3")
         # save output
         scores = output['cls_prob_reshape_output'].asnumpy()[0]
         bbox_deltas = output['bbox_pred_reshape_output'].asnumpy()[0]
@@ -61,6 +65,7 @@ def im_detect(predictor, data_batch, data_names, scales, cfg):
 
         scores_all.append(scores)
         pred_boxes_all.append(pred_boxes)
+        # print("loc 4")
     return scores_all, pred_boxes_all, data_dict_all
 
 
