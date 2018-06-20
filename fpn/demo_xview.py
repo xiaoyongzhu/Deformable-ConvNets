@@ -300,8 +300,9 @@ def main():
                 box = bfull[i, j]
                 class_prediction = classes[i, j]
                 score_prediction = scores[i, j]
-                f.write('%d %d %d %d %d %f \n' % \
-                    (box[0], box[1], box[2], box[3], int(class_prediction), score_prediction))
+                if int(class_prediction) != 0:
+                    f.write('%d %d %d %d %d %f \n' % \
+                        (box[0], box[1], box[2], box[3], int(class_prediction), score_prediction))
 
     print('done')
 
