@@ -43,7 +43,7 @@ num_classes = 61
 classes = ['Fixed-wing Aircraft','Small Aircraft','Cargo Plane','Helicopter','Passenger Vehicle','Small Car','Bus','Pickup Truck','Utility Truck','Truck','Cargo Truck','Truck w/Box','Truck Tractor','Trailer','Truck w/Flatbed','Truck w/Liquid','Crane Truck','Railway Vehicle','Passenger Car','Cargo Car','Flat Car','Tank car','Locomotive','Maritime Vessel','Motorboat','Sailboat','Tugboat','Barge','Fishing Vessel','Ferry','Yacht','Container Ship','Oil Tanker','Engineering Vehicle','Tower crane','Container Crane','Reach Stacker','Straddle Carrier','Mobile Crane','Dump Truck','Haul Truck','Scraper/Tractor','Front loader/Bulldozer','Excavator','Cement Mixer','Ground Grader','Hut/Tent','Shed','Building','Aircraft Hangar','Damaged Building','Facility','Construction Site','Vehicle Lot','Helipad','Storage Tank','Shipping container lot','Shipping Container','Pylon','Tower']
 
 
-def generate_detections(data, data_names, predictor, config, image_list):
+def generate_detections(data, data_names, predictor, config, nms, image_list):
     global classes
     ret_boxes = []
     ret_scores = []
@@ -53,7 +53,6 @@ def generate_detections(data, data_names, predictor, config, image_list):
 
     for idx, im in enumerate(image_list):
         # print("start evaluating image",im_name)
-        nms = py_nms_wrapper(config.TEST.NMS)
         data_batch = mx.io.DataBatch(data=[data[idx]], label=[], pad=0, index=idx,
                                         provide_data=[[(k, v.shape) for k, v in zip(data_names, data[idx])]],
                                         provide_label=[None])
@@ -78,23 +77,31 @@ def generate_detections(data, data_names, predictor, config, image_list):
         # a length 60 array, with each element being a dict representing each class
         # the coordinates are in (xmin, ymin, xmax, ymax, confidence) format. The coordinates are not normalized
         # one sample is: [290.09448    439.60617    333.31235    461.8115       0.94750994]
-        for index in range(len(dets_nms)):
-            element = dets_nms[index]
-            if element.size != 0:
-                for index_element in range(len(element)):
-                    ret_boxes.append(dets_nms[index][index_element][:-1]) #get all the element other than the last one
-                    ret_scores.append(dets_nms[index][index_element][-1]) #last element 
-                    ret_classes.append(conversion_dict[index])
-                # pad zeros
-                detection_num = 250
-                if (len(element)) <= detection_num:
-                    for index_element in range(detection_num - len(element)):
-                        ret_boxes.append(np.zeros((4,),dtype=np.float32)) #get all the element other than the last one
-                        ret_scores.append(0) #last element 
-                        ret_classes.append(0)
-                else:
-                    print("too many predictions")
-        print("return length", len(ret_boxes), "actual detection", len(element))
+        # below iterates class by class
+        image_detection_num = 0
+        for index_class in range(len(dets_nms)):
+            # for each class
+            single_class_nms = dets_nms[index_class]
+            image_detection_num += len(single_class_nms)
+            if len(single_class_nms) != 0:
+                print("detecting", single_class_nms.size, "number of objects", len(single_class_nms))
+                # print(single_class_nms)
+                for index_single_class_nms in range(len(single_class_nms)):
+                    # print("index_class,index_single_class_nms", index_class,index_single_class_nms, )
+                    ret_boxes.append(dets_nms[index_class][index_single_class_nms][:-1]) #get all the element other than the last one
+                    ret_scores.append(dets_nms[index_class][index_single_class_nms][-1]) #last element 
+                    ret_classes.append(conversion_dict[index_class])
+        # pad zeros
+        detection_num = 250
+        # print("1st: len(ret_boxes), image_detection_num", len(ret_boxes), image_detection_num)
+        if image_detection_num <= detection_num:
+            for index_element in range(detection_num - image_detection_num):
+                ret_boxes.append(np.zeros((4,),dtype=np.float32)) #get all the element other than the last one
+                ret_scores.append(0) #last element 
+                ret_classes.append(0)
+        else:
+            print("too many predictions")
+        print("len(ret_boxes), image_detection_num", len(ret_boxes), image_detection_num)
                 
         print('testing {} {:.4f}s'.format(idx, toc()))
         im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
@@ -106,29 +113,6 @@ def generate_detections(data, data_names, predictor, config, image_list):
     ret_classes = np.squeeze(np.array(ret_classes))
 
     return ret_boxes, ret_scores, ret_classes
-
-    # with detection_graph.as_default():
-    #     with tf.Session(graph = detection_graph) as sess:
-    #         for image_np in tqdm(images):
-    #             image_np_expanded = np.expand_dims(image_np, axis=0)
-    #             image_tensor = detection_graph.get_tensor_by_name('image_tensor:0')
-    #             box = detection_graph.get_tensor_by_name('detection_boxes:0')
-    #             score = detection_graph.get_tensor_by_name('detection_scores:0')
-    #             clss = detection_graph.get_tensor_by_name('detection_classes:0')
-    #             num_detections = detection_graph.get_tensor_by_name('num_detections:0')
-    #             # Actual detection.
-    #             (box, score, clss, num_detections) = sess.run(
-    #                     [box, score, clss, num_detections],
-    #                     feed_dict={image_tensor: image_np_expanded})
-    #             boxes.append(box)
-    #             scores.append(score)
-    #             classes.append(clss)
-                
-    # boxes =   np.squeeze(np.array(boxes))
-    # scores = np.squeeze(np.array(scores))
-    # classes = np.squeeze(np.array(classes))
-
-    # return boxes, scores, classes
 
 
 def draw_bboxes(img,boxes,classes):
@@ -164,6 +148,7 @@ def parse_args():
     # parser.add_argument('--fpn_only', help='whether use R-FCN only (w/o Deformable ConvNets)', default=False, action='store_true')
     parser.add_argument("--input", help="Path to test chip")
     parser.add_argument("-o","--output",default="predictions.txt",help="Filepath of desired output")
+    parser.add_argument("--cpu_only",default=True,help="whether CPU only or GPU")
 
     args = parser.parse_args()
     return args
@@ -249,13 +234,21 @@ def main():
     # arg_params, aux_params = load_param(cur_path + '/../model/' + ('fpn_dcn_coco' if not args.fpn_only else 'fpn_coco'), 0, process=True)
     print("loading parameter done")
    
-    predictor = Predictor(sym, data_names, label_names,
+    if args.cpu_only:
+        predictor = Predictor(sym, data_names, label_names,
                           context=[mx.cpu()], max_data_shapes=max_data_shape,
                           provide_data=provide_data, provide_label=provide_label,
                           arg_params=arg_params, aux_params=aux_params)
+        nms = py_nms_wrapper(config.TEST.NMS)
+    else:
+        predictor = Predictor(sym, data_names, label_names,
+                          context=[mx.gpu(0)], max_data_shapes=max_data_shape,
+                          provide_data=provide_data, provide_label=provide_label,
+                          arg_params=arg_params, aux_params=aux_params)
+        nms = gpu_nms_wrapper(config.TEST.NMS,0)        
 
     # test
-    boxes, scores, classes = generate_detections(data, data_names, predictor, config, image_list)
+    boxes, scores, classes = generate_detections(data, data_names, predictor, config, nms, image_list)
     #Process boxes to be full-sized
     
 
@@ -290,7 +283,7 @@ def main():
     bs = bfull[scores > .5]
     cs = classes[scores>.5]
     s = im_name
-    draw_bboxes(arr,bs,cs).save("bbox_viz/"+s[0].split(".")[0] + ".png")
+    draw_bboxes(arr,bs,cs).save("/tmp/"+s[0].split(".")[0] + ".png")
 
 
     with open(args.output,'w') as f:
