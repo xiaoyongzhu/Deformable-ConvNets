@@ -149,6 +149,7 @@ def parse_args():
     parser.add_argument("--input", help="Path to test chip")
     parser.add_argument("-o","--output",default="predictions.txt",help="Filepath of desired output")
     parser.add_argument("--cpu_only",default=True,help="whether CPU only or GPU")
+    parser.add_argument("--chip_size",default=480,help="chip size for the input images; we will chip based on this resolution with (chip_size, chip_size)")
 
     args = parser.parse_args()
     return args
@@ -194,7 +195,7 @@ def main():
     # load demo data
     im_name = '24_part.jpg'
     data = []
-    portion = 480
+    portion = args.chip_size
     assert os.path.exists(args.input), ('%s does not exist'.format('../demo/' + im_name))
     im = cv2.imread(args.input, cv2.IMREAD_COLOR | cv2.IMREAD_IGNORE_ORIENTATION)
     arr = np.array(im)
@@ -212,7 +213,7 @@ def main():
     cwn,chn = (portion, portion)
     wn,hn = (int(width / cwn), int(height / chn))
     
-    image_list = chip_image(im,(480,480))
+    image_list = chip_image(im,(portion,portion))
     for im in image_list:
         target_size = config.SCALES[0][0]
         max_size = config.SCALES[0][1]
