@@ -149,7 +149,7 @@ def parse_args():
     parser.add_argument("--input", help="Path to test chip")
     parser.add_argument("-o","--output",default="predictions.txt",help="Filepath of desired output")
     parser.add_argument("--cpu_only",default=True,help="whether CPU only or GPU")
-    parser.add_argument("--chip_size",default=480,help="chip size for the input images; we will chip based on this resolution with (chip_size, chip_size)")
+    parser.add_argument("--chip_size",default=480,type=int,help="chip size for the input images; we will chip based on this resolution with (chip_size, chip_size)")
 
     args = parser.parse_args()
     return args
