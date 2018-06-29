@@ -43,7 +43,7 @@ num_classes = 61
 classes = ['Fixed-wing Aircraft','Small Aircraft','Cargo Plane','Helicopter','Passenger Vehicle','Small Car','Bus','Pickup Truck','Utility Truck','Truck','Cargo Truck','Truck w/Box','Truck Tractor','Trailer','Truck w/Flatbed','Truck w/Liquid','Crane Truck','Railway Vehicle','Passenger Car','Cargo Car','Flat Car','Tank car','Locomotive','Maritime Vessel','Motorboat','Sailboat','Tugboat','Barge','Fishing Vessel','Ferry','Yacht','Container Ship','Oil Tanker','Engineering Vehicle','Tower crane','Container Crane','Reach Stacker','Straddle Carrier','Mobile Crane','Dump Truck','Haul Truck','Scraper/Tractor','Front loader/Bulldozer','Excavator','Cement Mixer','Ground Grader','Hut/Tent','Shed','Building','Aircraft Hangar','Damaged Building','Facility','Construction Site','Vehicle Lot','Helipad','Storage Tank','Shipping container lot','Shipping Container','Pylon','Tower']
 
 
-def generate_detections(data, data_names, predictor, config, nms, image_list):
+def generate_detections(data, data_names, predictor, config, nms, image_list, detection_num):
     global classes
     ret_boxes = []
     ret_scores = []
@@ -86,24 +86,23 @@ def generate_detections(data, data_names, predictor, config, nms, image_list):
             if len(single_class_nms) != 0:
                 print("detecting", single_class_nms.size, "number of objects", len(single_class_nms))
                 # print(single_class_nms)
-                for index_single_class_nms in range(len(single_class_nms)):
+                for index_single_class_nms in range(min(len(single_class_nms),detection_num)):
                     # print("index_class,index_single_class_nms", index_class,index_single_class_nms, )
                     ret_boxes.append(dets_nms[index_class][index_single_class_nms][:-1]) #get all the element other than the last one
                     ret_scores.append(dets_nms[index_class][index_single_class_nms][-1]) #last element 
                     ret_classes.append(conversion_dict[index_class])
         # pad zeros
-        detection_num = 250
         # print("1st: len(ret_boxes), image_detection_num", len(ret_boxes), image_detection_num)
         if image_detection_num <= detection_num:
-            for index_element in range(detection_num - image_detection_num):
+            for index_element in range(int(detection_num - image_detection_num)):
                 ret_boxes.append(np.zeros((4,),dtype=np.float32)) #get all the element other than the last one
                 ret_scores.append(0) #last element 
                 ret_classes.append(0)
         else:
-            print("too many predictions")
+            print("~~~~~ too many predictions ~~~~~~~~~~~~~~~")
         print("len(ret_boxes), image_detection_num", len(ret_boxes), image_detection_num)
                 
-        print('testing {} {:.4f}s'.format(idx, toc()))
+        print('testing image {} {:.4f}s, detection number {}'.format(idx +1 , toc(),image_detection_num))
         im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
         # visualize
         # don't show the final images.
@@ -193,10 +192,9 @@ def main():
     sym = sym_instance.get_symbol(config, is_train=False)
 
     # load demo data
-    im_name = '24_part.jpg'
     data = []
     portion = args.chip_size
-    assert os.path.exists(args.input), ('%s does not exist'.format('../demo/' + im_name))
+    assert os.path.exists(args.input), ('%s does not exist'.format(args.input))
     im = cv2.imread(args.input, cv2.IMREAD_COLOR | cv2.IMREAD_IGNORE_ORIENTATION)
     arr = np.array(im)
     origin_width,origin_height,_ = arr.shape
@@ -248,8 +246,9 @@ def main():
                           arg_params=arg_params, aux_params=aux_params)
         nms = gpu_nms_wrapper(config.TEST.NMS,0)        
 
+    num_preds = int(250 * math.ceil(float(portion)/400))
     # test
-    boxes, scores, classes = generate_detections(data, data_names, predictor, config, nms, image_list)
+    boxes, scores, classes = generate_detections(data, data_names, predictor, config, nms, image_list, num_preds)
     #Process boxes to be full-sized
     
 
@@ -266,12 +265,12 @@ def main():
             bfull[i, j, :, 1] += i*chn
             bfull[i, j, :, 3] += i*chn
             
-    # clip values
-    bfull[i, j, :, 0] = np.clip(bfull[i, j, :, 0], 0,origin_height)
-    bfull[i, j, :, 2] = np.clip(bfull[i, j, :, 2], 0,origin_height)
-    
-    bfull[i, j, :, 1] = np.clip(bfull[i, j, :, 1], 0,origin_width)
-    bfull[i, j, :, 3] = np.clip(bfull[i, j, :, 3], 0,origin_width)
+            # clip values
+            bfull[i, j, :, 0] = np.clip(bfull[i, j, :, 0], 0,origin_height)
+            bfull[i, j, :, 2] = np.clip(bfull[i, j, :, 2], 0,origin_height)
+            
+            bfull[i, j, :, 1] = np.clip(bfull[i, j, :, 1], 0,origin_width)
+            bfull[i, j, :, 3] = np.clip(bfull[i, j, :, 3], 0,origin_width)
 
     bfull = bfull.reshape((hn * wn, num_preds, 4))
     scores = scores.reshape((hn * wn, num_preds))
@@ -284,7 +283,7 @@ def main():
     bs = bfull[scores > .5]
     cs = classes[scores>.5]
     s = im_name
-    draw_bboxes(arr,bs,cs).save("/tmp/"+s[0].split(".")[0] + ".png")
+    # draw_bboxes(arr,bs,cs).save("/tmp/"+s[0].split(".")[0] + ".png")
 
 
     with open(args.output,'w') as f:
@@ -302,3 +301,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
