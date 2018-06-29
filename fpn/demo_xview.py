@@ -245,7 +245,7 @@ def main():
                           arg_params=arg_params, aux_params=aux_params)
         nms = gpu_nms_wrapper(config.TEST.NMS,0)        
 
-    num_preds = int(250 * math.ceil(float(portion)/400))
+    num_preds = int(500 * math.ceil(float(portion)/400))
     # test
     boxes, scores, classes = generate_detections(data, data_names, predictor, config, nms, image_list, num_preds)
     #Process boxes to be full-sized
