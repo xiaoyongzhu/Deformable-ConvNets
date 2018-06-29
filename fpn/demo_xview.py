@@ -52,7 +52,6 @@ def generate_detections(data, data_names, predictor, config, nms, image_list, de
     conversion_dict = {0:"11",1:"12",2:"13",3:"15",4:"17",5:"18",6:"19",7:"20",8:"21",9:"23",10:"24",11:"25",12:"26",13:"27",14:"28",15:"29",16:"32",17:"33",18:"34",19:"35",20:"36",21:"37",22:"38",23:"40",24:"41",25:"42",26:"44",27:"45",28:"47",29:"49",30:"50",31:"51",32:"52",33:"53",34:"54",35:"55",36:"56",37:"57",38:"59",39:"60",40:"61",41:"62",42:"63",43:"64",44:"65",45:"66",46:"71",47:"72",48:"73",49:"74",50:"76",51:"77",52:"79",53:"83",54:"84",55:"86",56:"89",57:"91",58:"93",59:"94"}
 
     for idx, im in enumerate(image_list):
-        # print("start evaluating image",im_name)
         data_batch = mx.io.DataBatch(data=[data[idx]], label=[], pad=0, index=idx,
                                         provide_data=[[(k, v.shape) for k, v in zip(data_names, data[idx])]],
                                         provide_label=[None])
@@ -251,9 +250,6 @@ def main():
     boxes, scores, classes = generate_detections(data, data_names, predictor, config, nms, image_list, num_preds)
     #Process boxes to be full-sized
     
-
-
-    num_preds = 250
     print("boxes shape is", boxes.shape, "wn, hn", wn, hn, "width, height", width, height)
     bfull = boxes.reshape((wn, hn, num_preds, 4))
 
@@ -282,7 +278,7 @@ def main():
     # print(bfull, scores, classes)
     bs = bfull[scores > .5]
     cs = classes[scores>.5]
-    s = im_name
+    # s = im_name
     # draw_bboxes(arr,bs,cs).save("/tmp/"+s[0].split(".")[0] + ".png")
 
 
