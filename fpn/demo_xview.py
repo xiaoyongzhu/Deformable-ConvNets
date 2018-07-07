@@ -68,7 +68,7 @@ def generate_detections(data, data_names, predictor, config, nms, image_list, de
             cls_dets = np.hstack((cls_boxes, cls_scores))
             keep = nms(cls_dets)
             cls_dets = cls_dets[keep, :]
-            cls_dets = cls_dets[cls_dets[:, -1] > 0.7, :]
+            cls_dets = cls_dets[cls_dets[:, -1] > 0.01, :]
             
             dets_nms.append(cls_dets)
 
@@ -212,8 +212,8 @@ def main():
     
     image_list = chip_image(im,(portion,portion))
     for im in image_list:
-        target_size = config.SCALES[0][0]
-        max_size = config.SCALES[0][1]
+        target_size = args.input_size
+        max_size =  args.input_size
         im, im_scale = resize(im, target_size, max_size, stride=config.network.IMAGE_STRIDE)
         im_tensor = transform(im, config.network.PIXEL_MEANS)
         im_info = np.array([[im_tensor.shape[2], im_tensor.shape[3], im_scale]], dtype=np.float32)
@@ -245,7 +245,7 @@ def main():
                           arg_params=arg_params, aux_params=aux_params)
         nms = gpu_nms_wrapper(config.TEST.NMS,0)        
 
-    num_preds = int(500 * math.ceil(float(portion)/400))
+    num_preds = int(4000 * math.ceil(float(portion)/400))
     # test
     boxes, scores, classes = generate_detections(data, data_names, predictor, config, nms, image_list, num_preds)
     #Process boxes to be full-sized
