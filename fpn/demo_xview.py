@@ -212,8 +212,8 @@ def main():
     
     image_list = chip_image(im,(portion,portion))
     for im in image_list:
-        target_size = args.input_size
-        max_size =  args.input_size
+        target_size = args.chip_size
+        max_size =  args.chip_size
         im, im_scale = resize(im, target_size, max_size, stride=config.network.IMAGE_STRIDE)
         im_tensor = transform(im, config.network.PIXEL_MEANS)
         im_info = np.array([[im_tensor.shape[2], im_tensor.shape[3], im_scale]], dtype=np.float32)
