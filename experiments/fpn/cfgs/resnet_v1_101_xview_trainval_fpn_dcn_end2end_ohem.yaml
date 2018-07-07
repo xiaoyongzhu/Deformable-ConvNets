@@ -5,8 +5,8 @@ symbol: resnet_v1_101_fpn_dcn_rcnn
 gpus: '0,1,2,3'
 CLASS_AGNOSTIC: false
 SCALES:
-- 480
-- 800
+- 640
+- 640
 - 960
 # TEST_SCALES: [[800, 1280]] # single scale testing
 # TEST_SCALES: [ [480, 480], [640, 640], [800, 800],[960,960],[1280,1280]] # multi-scale testing
