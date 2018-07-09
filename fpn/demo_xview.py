@@ -155,6 +155,13 @@ def parse_args():
 import math
 
 def roundup_to_num(x, target):
+    """
+    Round a input number up to the number that can be divided by target number
+    Args:
+        x: input number
+        target: the number that you want to divide by.
+        for example, roundup_to_num(38,5) will round 38 to the nearest number that can be divided by 5, and the return would be 40.
+    """
     return int(math.ceil(x / float(target))) * int(target)
 
 
@@ -196,7 +203,7 @@ def main():
     arr = np.array(im)
     origin_width,origin_height,_ = arr.shape
 
-    tested_cpu_scoring_resolution = 2400
+    tested_cpu_scoring_resolution = 2560
     #smart chipping
     max_cpu_scoring_resolution = roundup_to_num(tested_cpu_scoring_resolution,32)
     max_resolution = max(origin_width,origin_height)
