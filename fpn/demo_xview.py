@@ -68,7 +68,7 @@ def generate_detections(data, data_names, predictor, config, nms, image_list, de
             cls_dets = np.hstack((cls_boxes, cls_scores))
             keep = nms(cls_dets)
             cls_dets = cls_dets[keep, :]
-            cls_dets = cls_dets[cls_dets[:, -1] > 0.01, :]
+            cls_dets = cls_dets[cls_dets[:, -1] > 0.08, :]
             
             dets_nms.append(cls_dets)
 
@@ -152,6 +152,12 @@ def parse_args():
     args = parser.parse_args()
     return args
 
+import math
+
+def roundup_to_num(x, target):
+    return int(math.ceil(x / float(target))) * int(target)
+
+
 args = parse_args()
 
 def chip_image(img, chip_size=(300,300)):
@@ -184,6 +190,40 @@ def chip_image(img, chip_size=(300,300)):
 
 def main():
     global classes
+
+    assert os.path.exists(args.input), ('%s does not exist'.format(args.input))
+    im = cv2.imread(args.input, cv2.IMREAD_COLOR | cv2.IMREAD_IGNORE_ORIENTATION)
+    arr = np.array(im)
+    origin_width,origin_height,_ = arr.shape
+
+    tested_cpu_scoring_resolution = 2400
+    #smart chipping
+    max_cpu_scoring_resolution = roundup_to_num(tested_cpu_scoring_resolution,32)
+    max_resolution = max(origin_width,origin_height)
+    min_resolution =  min(origin_width,origin_height)
+    if max_resolution < max_cpu_scoring_resolution:
+        # only one chip
+        portion = roundup_to_num(max_resolution,32) 
+    elif min_resolution < max_cpu_scoring_resolution:
+        # in this case, there will be only 2 chips. 
+        # assuming width is always less than height
+        portion = roundup_to_num(min_resolution,32) 
+    elif  max_resolution < max_cpu_scoring_resolution *2:
+        # if possible, divide the image into 4 sub images
+        # the value needs to be divided by 64, since we will divide this number by two and the result needs to be divided by 32
+        portion = roundup_to_num(max_resolution,64)/2
+    elif min_resolution < max_cpu_scoring_resolution *2:
+        # at least one of the dimension is too big. Make sure the min dimension size could be divided into two chips.
+        portion = roundup_to_num(min_resolution,64)/2
+    else:
+        # image too big. use the max possible CPU resolution
+        portion = max_cpu_scoring_resolution
+
+    # manually update the configuration
+    # print(config.SCALES[0][0])
+    # TODO: note this is hard coded and assume there are three values for the SCALE configuration
+    config.SCALES[0] = (portion, portion, portion)
+    # config.max_per_image = 
     # get symbol
     pprint.pprint(config)
     config.symbol = 'resnet_v1_101_fpn_dcn_rcnn' 
@@ -192,11 +232,9 @@ def main():
 
     # load demo data
     data = []
-    portion = args.chip_size
-    assert os.path.exists(args.input), ('%s does not exist'.format(args.input))
-    im = cv2.imread(args.input, cv2.IMREAD_COLOR | cv2.IMREAD_IGNORE_ORIENTATION)
-    arr = np.array(im)
-    origin_width,origin_height,_ = arr.shape
+    
+    # portion = args.chip_size
+
     cwn,chn = (portion, portion)
     wn,hn = (int(origin_width / cwn), int(origin_height / chn))
     padding_y = int(math.ceil(float(origin_height)/chn) * chn - origin_height)
@@ -212,9 +250,10 @@ def main():
     
     image_list = chip_image(im,(portion,portion))
     for im in image_list:
-        target_size = args.chip_size
-        max_size =  args.chip_size
+        target_size = portion
+        max_size = portion
         im, im_scale = resize(im, target_size, max_size, stride=config.network.IMAGE_STRIDE)
+        # print("im.shape,im_scale",im.shape,im_scale)
         im_tensor = transform(im, config.network.PIXEL_MEANS)
         im_info = np.array([[im_tensor.shape[2], im_tensor.shape[3], im_scale]], dtype=np.float32)
         data.append({'data': im_tensor, 'im_info': im_info})
@@ -240,12 +279,12 @@ def main():
         nms = py_nms_wrapper(config.TEST.NMS)
     else:
         predictor = Predictor(sym, data_names, label_names,
-                          context=[mx.gpu(0)], max_data_shapes=max_data_shape,
+                          context=[mx.gpu(args.gpu_index)], max_data_shapes=max_data_shape,
                           provide_data=provide_data, provide_label=provide_label,
                           arg_params=arg_params, aux_params=aux_params)
         nms = gpu_nms_wrapper(config.TEST.NMS,0)        
 
-    num_preds = int(4000 * math.ceil(float(portion)/400))
+    num_preds = int(5000 * math.ceil(float(portion)/400))
     # test
     boxes, scores, classes = generate_detections(data, data_names, predictor, config, nms, image_list, num_preds)
     #Process boxes to be full-sized
@@ -274,14 +313,18 @@ def main():
 
 
     #only display boxes with confidence > .5
-    print("bfull.shape,scores.shape",bfull.shape,scores.shape)
+    
     # print(bfull, scores, classes)
-    bs = bfull[scores > .5]
-    cs = classes[scores>.5]
+    #bs = bfull[scores > 0.08]
+    #cs = classes[scores>0.08]
+    #print("bfull.shape,scores.shape, bs.shape",bfull.shape,scores.shape, bs.shape)
     # s = im_name
     # draw_bboxes(arr,bs,cs).save("/tmp/"+s[0].split(".")[0] + ".png")
 
+    #scoring_line_threshold = 11000
 
+    #if bs.shape[0] > scoring_line_threshold:
+        # too many predictions, we should trim the low confidence ones
     with open(args.output,'w') as f:
         for i in range(bfull.shape[0]):
             for j in range(bfull[i].shape[0]):
@@ -297,4 +340,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
