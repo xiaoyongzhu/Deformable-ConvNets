@@ -159,7 +159,7 @@ TEST:
   USE_SOFTNMS: true
   SOFTNMS_THRESH: 0.6
   test_epoch: "15" #can be either 8, or "6,7,8"
-  max_per_image: 400
+  max_per_image: 6000
   # soft nms
   USE_SOFTNMS: true
   SOFTNMS_THRESH: 0.6
