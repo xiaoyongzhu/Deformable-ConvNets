@@ -194,15 +194,7 @@ def chip_image(img, chip_size=(300,300)):
             k = k + 1
     
     return images.astype(np.uint8)
-
-def main():
-    global classes
-
-    assert os.path.exists(args.input), ('%s does not exist'.format(args.input))
-    im = cv2.imread(args.input, cv2.IMREAD_COLOR | cv2.IMREAD_IGNORE_ORIENTATION)
-    arr = np.array(im)
-    origin_width,origin_height,_ = arr.shape
-
+def smart_chipping(origin_width, origin_height):
     tested_cpu_scoring_resolution = 2560
     #smart chipping
     max_cpu_scoring_resolution = roundup_to_num(tested_cpu_scoring_resolution,32)
@@ -225,6 +217,17 @@ def main():
     else:
         # image too big. use the max possible CPU resolution
         portion = max_cpu_scoring_resolution
+    return portion
+
+def main():
+    global classes
+
+    assert os.path.exists(args.input), ('%s does not exist'.format(args.input))
+    im = cv2.imread(args.input, cv2.IMREAD_COLOR | cv2.IMREAD_IGNORE_ORIENTATION)
+    arr = np.array(im)
+    origin_width,origin_height,_ = arr.shape
+
+    portion = smart_chipping(origin_width,origin_height)
 
     # manually update the configuration
     # print(config.SCALES[0][0])
