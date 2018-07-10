@@ -194,8 +194,9 @@ def chip_image(img, chip_size=(300,300)):
             k = k + 1
     
     return images.astype(np.uint8)
+
 def smart_chipping(origin_width, origin_height):
-    tested_cpu_scoring_resolution = 2560
+    tested_cpu_scoring_resolution = 2300
     #smart chipping
     max_cpu_scoring_resolution = roundup_to_num(tested_cpu_scoring_resolution,32)
     max_resolution = max(origin_width,origin_height)
@@ -214,10 +215,17 @@ def smart_chipping(origin_width, origin_height):
     elif min_resolution < max_cpu_scoring_resolution *2:
         # at least one of the dimension is too big. Make sure the min dimension size could be divided into two chips.
         portion = roundup_to_num(min_resolution,64)/2
+    elif  max_resolution < max_cpu_scoring_resolution *3:
+        # if possible, divide the image into 4 sub images
+        # the value needs to be divided by 64, since we will divide this number by two and the result needs to be divided by 32
+        portion = roundup_to_num(max_resolution,96)/3
+    elif min_resolution < max_cpu_scoring_resolution *3:
+        # at least one of the dimension is too big. Make sure the min dimension size could be divided into two chips.
+        portion = roundup_to_num(min_resolution,96)/3
     else:
         # image too big. use the max possible CPU resolution
         portion = max_cpu_scoring_resolution
-    return portion
+    return int(portion)
 
 def main():
     global classes
