@@ -204,21 +204,21 @@ def smart_chipping(origin_width, origin_height):
     if max_resolution < max_cpu_scoring_resolution:
         # only one chip
         portion = roundup_to_num(max_resolution,32) 
-    elif min_resolution < max_cpu_scoring_resolution:
-        # in this case, there will be only 2 chips. 
-        # assuming width is always less than height
-        portion = roundup_to_num(min_resolution,32) 
     elif  max_resolution < max_cpu_scoring_resolution *2:
         # if possible, divide the image into 4 sub images
         # the value needs to be divided by 64, since we will divide this number by two and the result needs to be divided by 32
         portion = roundup_to_num(max_resolution,64)/2
-    elif min_resolution < max_cpu_scoring_resolution *2:
-        # at least one of the dimension is too big. Make sure the min dimension size could be divided into two chips.
-        portion = roundup_to_num(min_resolution,64)/2
     elif  max_resolution < max_cpu_scoring_resolution *3:
         # if possible, divide the image into 4 sub images
         # the value needs to be divided by 64, since we will divide this number by two and the result needs to be divided by 32
-        portion = roundup_to_num(max_resolution,96)/3
+        portion = roundup_to_num(max_resolution,96)/3        
+    elif min_resolution < max_cpu_scoring_resolution:
+        # in this case, there will be only 2 chips. 
+        # assuming width is always less than height
+        portion = roundup_to_num(min_resolution,32) 
+    elif min_resolution < max_cpu_scoring_resolution *2:
+        # at least one of the dimension is too big. Make sure the min dimension size could be divided into two chips.
+        portion = roundup_to_num(min_resolution,64)/2
     elif min_resolution < max_cpu_scoring_resolution *3:
         # at least one of the dimension is too big. Make sure the min dimension size could be divided into two chips.
         portion = roundup_to_num(min_resolution,96)/3
