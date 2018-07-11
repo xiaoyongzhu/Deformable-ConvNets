@@ -196,7 +196,7 @@ def chip_image(img, chip_size=(300,300)):
     return images.astype(np.uint8)
 
 def smart_chipping(origin_width, origin_height):
-    tested_cpu_scoring_resolution = 2528 #2300 will definitely work. Trying out 2400
+    tested_cpu_scoring_resolution = 2464 #2300 will definitely work. Trying out 2400
     #smart chipping
     max_cpu_scoring_resolution = roundup_to_num(tested_cpu_scoring_resolution,32)
     max_resolution = max(origin_width,origin_height)
